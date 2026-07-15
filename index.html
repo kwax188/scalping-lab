@@ -40,6 +40,12 @@
   .dbbox.show{display:flex}
   .dbinfo{font-size:11.5px;color:var(--sub);font-family:var(--mono);line-height:1.8;flex:1;min-width:200px}
   .dbinfo b{color:var(--blue)}
+  .autoload{display:none;margin-top:10px;font-size:12px;color:var(--gold);
+    font-family:var(--mono);line-height:1.8}
+  .autoload.show{display:block}
+  .autoload .bar{height:6px;background:var(--panel2);border:1px solid var(--line);
+    border-radius:4px;overflow:hidden;margin-top:6px}
+  .autoload .bar>i{display:block;height:100%;width:0;background:var(--gold);transition:width .2s}
 
   .ctrl-row{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
   .ctrl{flex:1;min-width:120px}
@@ -151,6 +157,7 @@
       <input type="file" id="file" accept=".csv,.txt" multiple>
     </label>
     <div class="datastat" id="datastat"></div>
+    <div class="autoload" id="autoload"></div>
     <div class="dbbox" id="dbbox">
       <div class="dbinfo" id="dbinfo">保存済みデータ: なし</div>
       <button class="clearall" id="clearDbBtn">🗑 全データ削除</button>
@@ -1517,8 +1524,67 @@ window.addEventListener("resize", ()=>{
     drawGalleryCanvases(activeSlot);
 });
 
-/* ============ 起動時: IndexedDB から自動復元 ============ */
-(async function restoreFromDB(){
+/* ============ バイナリ(.bin)デコード ============
+   変換スクリプト(convert_csv_to_bin.js)の SoA 形式を M1 配列に復元する。
+   [Int32 N][Int32×N minuteIndex][F32×N o][F32×N h][F32×N l][F32×N c] */
+function parseBin(buf){
+  const dv = new DataView(buf);
+  const n = dv.getInt32(0, true);
+  if (n <= 0 || 4 + n*20 > buf.byteLength) throw new Error("binヘッダ不正");
+  let off = 4;
+  const t = new Int32Array(buf, off, n); off += n*4;
+  const o = new Float32Array(buf, off, n); off += n*4;
+  const h = new Float32Array(buf, off, n); off += n*4;
+  const l = new Float32Array(buf, off, n); off += n*4;
+  const c = new Float32Array(buf, off, n); off += n*4;
+  const out = new Array(n);
+  for (let i=0;i<n;i++) out[i] = {t: t[i]*60000, o:o[i], h:h[i], l:l[i], c:c[i]};
+  return out;
+}
+
+/* ============ プログレス表示 ============ */
+function showAutoload(msg, done, total){
+  const el = $("autoload");
+  el.classList.add("show");
+  const pct = total ? Math.round(done/total*100) : 0;
+  el.innerHTML = `📡 ${msg}` + (total ? `<div class="bar"><i style="width:${pct}%"></i></div>` : "");
+}
+function hideAutoload(){ $("autoload").classList.remove("show"); $("autoload").innerHTML=""; }
+
+/* ============ 同一リポジトリ data/ からの自動ロード ============
+   manifest.json → 各 m1_*.bin を順次 fetch → M1 構築 → IndexedDB 保存。
+   fetch できない環境(file:// ローカル起動・ファイル無し)は例外を投げ、
+   呼び出し側が従来のCSV手動ドロップにフォールバックする。 */
+async function autoLoadFromRepo(){
+  const mres = await fetch("data/manifest.json", {cache:"no-cache"});
+  if (!mres.ok) throw new Error("manifest.json が見つかりません (status "+mres.status+")");
+  const man = await mres.json();
+  const files = (man && man.files) || [];
+  if (!files.length) throw new Error("manifest.json にファイルがありません");
+
+  showAutoload(`データ取得中 0/${files.length}年分...`, 0, files.length);
+  const map = new Map();
+  for (let i=0;i<files.length;i++){
+    const r = await fetch("data/"+files[i]);
+    if (!r.ok) throw new Error(files[i]+" の取得に失敗 (status "+r.status+")");
+    const bars = parseBin(await r.arrayBuffer());
+    for (const b of bars) map.set(b.t, b);   // 同一日時は後勝ち(=二重登録防止)
+    showAutoload(`データ取得中 ${i+1}/${files.length}年分...`, i+1, files.length);
+  }
+  M1 = [...map.values()].sort((a,b)=>a.t-b.t);
+  rebuildFrames();
+  updateDataUI();
+  $("drawSearchBtn").disabled = false;
+  hideAutoload();
+  analyzeAllSlots();
+  // 次回起動時は fetch せず IndexedDB から復元できるよう保存
+  try { await idbSaveM1(M1); }
+  catch(e){ console.warn("IndexedDB保存に失敗(自動ロードデータ):", e); }
+}
+
+/* ============ 起動時: IDB復元 → 無ければ data/ 自動ロード → 無ければCSV手動 ============ */
+(async function bootData(){
+  // ① まず IndexedDB を確認(2回目以降はここで復元、ネットワーク不要)
   try {
     const saved = await idbLoadM1();
     if (saved.length){
@@ -1527,10 +1593,18 @@ window.addEventListener("resize", ()=>{
       updateDataUI();
       $("drawSearchBtn").disabled = false;
       analyzeAllSlots();
+      return;
     }
   } catch(e){
-    // IndexedDB 非対応/失敗時は静かにCSV手動読込へフォールバック(既存動作を維持)
     console.warn("IndexedDB復元に失敗:", e);
+  }
+  // ② IDBが空 → 同一リポジトリの data/ から自動ロードを試行
+  try {
+    await autoLoadFromRepo();
+  } catch(e){
+    // ③ fetch不可(file://ローカル起動・data/無し等)→ 従来のCSV手動ドロップへ
+    hideAutoload();
+    console.warn("自動ロード不可。CSV手動読み込みにフォールバックします:", e);
   }
 })();
 
