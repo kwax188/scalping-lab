@@ -1567,7 +1567,7 @@ async function autoLoadFromRepo(){
   const isMobile = (window.matchMedia && matchMedia("(pointer:coarse)").matches)
     || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
     || (typeof navigator.deviceMemory === "number" && navigator.deviceMemory <= 4);
-  const MOBILE_YEARS = 3;
+  const MOBILE_YEARS = 8;
   let note = "";
   if (isMobile && files.length > MOBILE_YEARS){
     files = files.slice(-MOBILE_YEARS);   // manifest.files は年昇順 → 末尾が直近
