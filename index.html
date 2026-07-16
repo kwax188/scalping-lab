@@ -127,20 +127,24 @@
   .gal-toggle{font-size:11px;color:var(--gold);font-weight:600}
   .gal-body{display:block;margin-top:8px}
   .gal-viewport{position:relative}
-  .gal-track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;
+  /* 縦スナップスクロール(TikTok風): 高さは1カード分をJSで設定 */
+  .gal-track{overflow-y:auto;scroll-snap-type:y mandatory;overscroll-behavior:contain;
     -webkit-overflow-scrolling:touch;scrollbar-width:none}
   .gal-track::-webkit-scrollbar{display:none}
-  .gal-card{flex:0 0 100%;scroll-snap-align:center;
+  .gal-card{scroll-snap-align:start;scroll-snap-stop:always;
     background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:8px 10px}
-  .gal-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:2;
+  /* 上下の矢印ボタン(水平中央・上/下) */
+  .gal-arrow{position:absolute;left:50%;transform:translateX(-50%);z-index:3;
     width:30px;height:30px;border-radius:50%;border:1px solid var(--line);
-    background:rgba(10,14,26,.82);color:var(--text);font-size:17px;line-height:1;
+    background:rgba(10,14,26,.82);color:var(--text);font-size:13px;line-height:1;
     cursor:pointer;display:flex;align-items:center;justify-content:center;user-select:none;padding:0}
   .gal-arrow:hover{border-color:var(--gold);color:var(--gold)}
-  .gal-arrow.prev{left:4px} .gal-arrow.next{right:4px}
+  .gal-arrow.prev{top:6px} .gal-arrow.next{bottom:6px}
   .gal-arrow:disabled{opacity:.25;cursor:default}
-  .gal-dots{display:flex;gap:6px;justify-content:center;margin-top:8px}
-  .gal-dot{width:7px;height:7px;border-radius:50%;background:var(--line);
+  /* インジケーター: 右端に縦並び */
+  .gal-dots{position:absolute;right:6px;top:50%;transform:translateY(-50%);z-index:3;
+    display:flex;flex-direction:column;gap:6px}
+  .gal-dot{width:7px;height:7px;border-radius:50%;background:rgba(138,148,172,.5);
     cursor:pointer;transition:.15s;padding:0;border:none}
   .gal-dot.active{background:var(--gold);transform:scale(1.3)}
   .gal-meta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;
@@ -1439,10 +1443,10 @@ function updateGallery(F){
     `<div class="gal-body"${galleryOpen ? "" : ' style="display:none"'}>` +
       `<div class="gal-viewport">` +
         `<div class="gal-track"></div>` +
-        `<button class="gal-arrow prev" aria-label="前へ">‹</button>` +
-        `<button class="gal-arrow next" aria-label="次へ">›</button>` +
+        `<button class="gal-arrow prev" aria-label="前へ">▲</button>` +
+        `<button class="gal-arrow next" aria-label="次へ">▼</button>` +
+        `<div class="gal-dots"></div>` +
       `</div>` +
-      `<div class="gal-dots"></div>` +
     `</div>`;
 
   const body  = g.querySelector(".gal-body");
@@ -1458,7 +1462,7 @@ function updateGallery(F){
     galleryOpen = !galleryOpen;
     body.style.display = galleryOpen ? "block" : "none";
     g.querySelector(".gal-toggle").textContent = galleryOpen ? "[閉じる ▲]" : "[開く ▼]";
-    if (galleryOpen){ drawGalleryCanvases(F); updateDots(g); }
+    if (galleryOpen){ setTrackHeight(g); drawGalleryCanvases(F); updateDots(g); }
   });
 
   const fmt = t=>{
@@ -1481,18 +1485,26 @@ function updateGallery(F){
     track.appendChild(card);
     const dot = document.createElement("button");
     dot.className = "gal-dot" + (idx===0 ? " active" : "");
-    dot.addEventListener("click", ()=> track.scrollTo({left: idx*track.clientWidth, behavior:"smooth"}));
+    dot.addEventListener("click", ()=> track.scrollTo({top: idx*track.clientHeight, behavior:"smooth"}));
     dots.appendChild(dot);
   });
 
   wireCarousel(g);
-  if (galleryOpen){ drawGalleryCanvases(F); updateDots(g); }
+  if (galleryOpen){ setTrackHeight(g); drawGalleryCanvases(F); updateDots(g); }
 }
 
-// カルーセルの現在位置インデックス(0基点)
+// 1カードちょうどが収まる高さを track に設定(はみ出し・見切れ防止)
+function setTrackHeight(g){
+  const track = g.querySelector(".gal-track");
+  if (!track || !track.children.length) return;
+  const cardH = track.children[0].offsetHeight;   // カードの自然な高さ(canvas 150px + メタ + 余白)
+  if (cardH > 0) track.style.height = cardH + "px";
+}
+
+// カルーセルの現在位置インデックス(0基点・縦)
 function galIndex(track){
-  const w = track.clientWidth || 1;
-  return Math.round(track.scrollLeft / w);
+  const h = track.clientHeight || 1;
+  return Math.round(track.scrollTop / h);
 }
 // ドット強調・矢印の有効/無効を現在位置に同期
 function updateDots(g){
@@ -1505,37 +1517,22 @@ function updateDots(g){
   if (prev) prev.disabled = idx <= 0;
   if (next) next.disabled = idx >= n-1;
 }
-// 矢印クリック・マウスドラッグ・スクロール連動を配線
+// 上下矢印クリック・スクロール連動を配線(縦スナップ)
 function wireCarousel(g){
   const track = g.querySelector(".gal-track");
-  const prev  = g.querySelector(".gal-arrow.prev");
-  const next  = g.querySelector(".gal-arrow.next");
+  const prev  = g.querySelector(".gal-arrow.prev");   // 上へ
+  const next  = g.querySelector(".gal-arrow.next");   // 下へ
   if (prev) prev.addEventListener("click", e=>{ e.stopPropagation();
-    track.scrollBy({left:-track.clientWidth, behavior:"smooth"}); });
+    track.scrollBy({top:-track.clientHeight, behavior:"smooth"}); });
   if (next) next.addEventListener("click", e=>{ e.stopPropagation();
-    track.scrollBy({left: track.clientWidth, behavior:"smooth"}); });
-  // スクロール(スワイプ含む)に合わせてドット/矢印を更新(rAFで間引き)
+    track.scrollBy({top: track.clientHeight, behavior:"smooth"}); });
+  // スクロール(スワイプ/ホイール含む)に合わせてドット/矢印を更新(rAFで間引き)
   let ticking = false;
   track.addEventListener("scroll", ()=>{
     if (ticking) return; ticking = true;
     requestAnimationFrame(()=>{ updateDots(g); ticking = false; });
   });
-  // PC: マウスドラッグで横送り(タッチはネイティブスクロールに任せる)
-  let dragging = false, startX = 0, startScroll = 0;
-  track.addEventListener("pointerdown", e=>{
-    if (e.pointerType !== "mouse") return;   // タッチ/ペンは既定のスワイプに任せる
-    dragging = true; startX = e.clientX; startScroll = track.scrollLeft;
-    track.style.cursor = "grabbing";
-    try { track.setPointerCapture(e.pointerId); } catch(_){}
-  });
-  track.addEventListener("pointermove", e=>{
-    if (!dragging) return;
-    track.scrollLeft = startScroll - (e.clientX - startX);
-  });
-  const endDrag = ()=>{ if (!dragging) return; dragging = false; track.style.cursor = ""; };
-  track.addEventListener("pointerup", endDrag);
-  track.addEventListener("pointercancel", endDrag);
-  track.addEventListener("pointerleave", endDrag);
+  // 縦スクロールはホイール/トラックパッド/スワイプのネイティブ動作に任せる(横用ドラッグは廃止)
 }
 
 // 5枚のcanvasを requestAnimationFrame で1枚ずつ非同期描画(まとめ描きの重さを分散)
@@ -1601,10 +1598,13 @@ function drawMiniChart(c, bars, from, WIN, FWD){
 
 buildSlots();
 
-/* リサイズ時: アクティブ枠のギャラリーcanvasを再描画(開いている時のみ) */
+/* リサイズ時: 高さ再計算 + canvas再描画 + ドット更新(開いている時のみ) */
 window.addEventListener("resize", ()=>{
-  if (activeSlot && galleryOpen && activeSlot.els.gallery.style.display !== "none")
+  if (activeSlot && galleryOpen && activeSlot.els.gallery.style.display !== "none"){
+    setTrackHeight(activeSlot.els.gallery);
     drawGalleryCanvases(activeSlot);
+    updateDots(activeSlot.els.gallery);
+  }
 });
 
 /* ============ バイナリ(.bin)デコード ============
