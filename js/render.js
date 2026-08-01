@@ -3,6 +3,18 @@ import { state, $ } from "./state.js";
 import { TFDEF, sdOf } from "./data.js";
 import { clampAnchors, backtestPattern } from "./pattern-search.js";
 
+/* キャンバス描画用アクセント色。CSS変数 --accent をその都度読む(ライト/ダーク切替に追随)。
+   ローソク足本体の赤/青(DMM配色)は画像解析側の色検出と対になるため固定のまま変更しない。 */
+function accentColor(){
+  const v = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
+  return v || "#C1602F";
+}
+function accentRGBA(alpha){
+  const hex = accentColor().replace("#","");
+  const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 /* ============ スクショチャート描画 ============ */
 export function drawShot(F){
   const c = F.els.canvas;
@@ -51,11 +63,11 @@ export function drawShot(F){
   // 現在/未来 境界
   if (showProj){
     const bx = xAt(bars.length-1)+bw/2;
-    ctx.strokeStyle="rgba(240,185,11,.35)";
+    ctx.strokeStyle=accentRGBA(.35);
     ctx.setLineDash([4,4]);
     ctx.beginPath();ctx.moveTo(bx,pad.t);ctx.lineTo(bx,h-pad.b);ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle="rgba(240,185,11,.85)";
+    ctx.fillStyle=accentRGBA(.85);
     ctx.font="10px sans-serif"; ctx.textAlign="left";
     ctx.fillText("→ 予想(類似"+res.n+"件の平均)", bx+4, pad.t+10);
   }
@@ -80,7 +92,7 @@ export function drawShot(F){
   for (const {pat, hits} of patterns){
     const hit = hits[hits.length-1];   // 最新の1個
     const dp = clampAnchors(hit.pivs, bars);          // 長すぎる外側アンカーを本体寄りに
-    ctx.strokeStyle = pat.dir>0 ? "rgba(22,199,132,.9)" : "rgba(240,185,11,.95)";
+    ctx.strokeStyle = pat.dir>0 ? "rgba(22,199,132,.9)" : accentRGBA(.95);
     ctx.lineWidth=2;
     ctx.setLineDash([3,2]);
     ctx.beginPath();
@@ -92,7 +104,7 @@ export function drawShot(F){
     ctx.stroke();
     ctx.setLineDash([]);
     dp.forEach(p=>{
-      ctx.fillStyle = pat.dir>0 ? "#16C784" : "#F0B90B";
+      ctx.fillStyle = pat.dir>0 ? "#16C784" : accentColor();
       ctx.beginPath();
       ctx.arc(xAt(p.i), y(p.p), 3.5, 0, Math.PI*2);
       ctx.fill();
@@ -101,7 +113,7 @@ export function drawShot(F){
     const anc = pat.dir>0
       ? dp.reduce((a,b)=> b.p<a.p?b:a)
       : dp.reduce((a,b)=> b.p>a.p?b:a);
-    ctx.fillStyle = pat.dir>0 ? "#16C784" : "#F0B90B";
+    ctx.fillStyle = pat.dir>0 ? "#16C784" : accentColor();
     ctx.font="bold 12px sans-serif"; ctx.textAlign="center";
     const lyS = Math.min(Math.max(pat.dir>0 ? y(anc.p)+20 : y(anc.p)-12, pad.t+12), h-pad.b-4);
     ctx.fillText("🔔"+pat.name, xAt(anc.i), lyS);
@@ -114,9 +126,9 @@ export function drawShot(F){
     projP75.forEach((v,i)=> i?ctx.lineTo(px(i),y(v)):ctx.moveTo(px(i),y(v)));
     for(let i=projP25.length-1;i>=0;i--) ctx.lineTo(px(i),y(projP25[i]));
     ctx.closePath();
-    ctx.fillStyle="rgba(240,185,11,.13)";
+    ctx.fillStyle=accentRGBA(.13);
     ctx.fill();
-    ctx.strokeStyle="#F0B90B"; ctx.lineWidth=2.4;
+    ctx.strokeStyle=accentColor(); ctx.lineWidth=2.4;
     ctx.setLineDash([6,4]);
     ctx.beginPath();
     projMean.forEach((v,i)=> i?ctx.lineTo(px(i),y(v)):ctx.moveTo(px(i),y(v)));
@@ -145,7 +157,7 @@ export function updateVerdict(F){
   const dirArrow = d => d>0 ? "↑" : d<0 ? "↓" : "→";
   let mtfTag = "";
   if (res.mtf && res.mtf.length){
-    mtfTag = `・上位足一致 <b style="color:var(--gold)">${res.mtf.map(m=>m.key+dirArrow(m.dir)).join(" / ")}</b>`;
+    mtfTag = `・上位足一致 <b style="color:var(--accent)">${res.mtf.map(m=>m.key+dirArrow(m.dir)).join(" / ")}</b>`;
   } else if (res.mtfFallback){
     mtfTag = `・<span style="opacity:.75">上位足一致は母数不足のため解除</span>`;
   }
@@ -340,12 +352,12 @@ export function drawMiniChart(c, bars, from, WIN, FWD){
 
   // その後(未来)側の背景
   const bx = pad.l + bw*WIN;   // WIN本目以降(=その後)の左端
-  ctx.fillStyle = "rgba(240,185,11,.08)";
+  ctx.fillStyle = accentRGBA(.08);
   ctx.fillRect(bx, pad.t, (w-pad.r)-bx, h-pad.t-pad.b);
   // 境界の点線
-  ctx.strokeStyle = "rgba(240,185,11,.45)"; ctx.setLineDash([4,3]);
+  ctx.strokeStyle = accentRGBA(.45); ctx.setLineDash([4,3]);
   ctx.beginPath(); ctx.moveTo(bx, pad.t); ctx.lineTo(bx, h-pad.b); ctx.stroke(); ctx.setLineDash([]);
-  ctx.fillStyle = "rgba(240,185,11,.85)"; ctx.font = "9px sans-serif"; ctx.textAlign = "left";
+  ctx.fillStyle = accentRGBA(.85); ctx.font = "9px sans-serif"; ctx.textAlign = "left";
   ctx.fillText("→その後", bx+3, pad.t+9);
 
   // ローソク(DMM配色: 陽線=赤/陰線=青。その後側は半透明で区別)
@@ -481,7 +493,7 @@ export function drawGhost(paths, FWD){
   for(let i=0;i<=FWD;i++){
     let s=0; paths.forEach(p=>s+=p[i]); mean.push(s/paths.length);
   }
-  ctx.strokeStyle="#F0B90B";ctx.lineWidth=2.5;
+  ctx.strokeStyle=accentColor();ctx.lineWidth=2.5;
   ctx.beginPath();
   mean.forEach((v,i)=> i?ctx.lineTo(x(i),y(v)):ctx.moveTo(x(i),y(v)));
   ctx.stroke();
@@ -506,9 +518,9 @@ export function drawDevChart(bars, pivs, endIdx, pat, ext){
   // 確定バーの縦線
   if(endIdx>=0&&endIdx<bars.length){
     const bx=xAt(endIdx);
-    ctx.strokeStyle="rgba(240,185,11,.3)";ctx.setLineDash([4,4]);
+    ctx.strokeStyle=accentRGBA(.3);ctx.setLineDash([4,4]);
     ctx.beginPath();ctx.moveTo(bx,pad.t);ctx.lineTo(bx,h-pad.b);ctx.stroke();ctx.setLineDash([]);
-    ctx.fillStyle="rgba(240,185,11,.8)";ctx.font="10px sans-serif";ctx.textAlign="left";
+    ctx.fillStyle=accentRGBA(.8);ctx.font="10px sans-serif";ctx.textAlign="left";
     ctx.fillText("← パターン確定", bx+4, pad.t+10);
   }
   // ローソク(DMM配色: 陽線=赤/陰線=青)
@@ -523,20 +535,20 @@ export function drawDevChart(bars, pivs, endIdx, pat, ext){
     ctx.fillRect(x-bwid/2,bt,bwid,Math.max(1.2,bb-bt));
   });
   // ピボット線
-  ctx.strokeStyle=pat.dir>0?"rgba(22,199,132,.9)":"rgba(240,185,11,.95)";
+  ctx.strokeStyle=pat.dir>0?"rgba(22,199,132,.9)":accentRGBA(.95);
   ctx.lineWidth=2;ctx.setLineDash([3,2]);ctx.beginPath();
   pivs.forEach((p,k)=>{k?ctx.lineTo(xAt(p.i),y(p.p)):ctx.moveTo(xAt(p.i),y(p.p));});
   if(ext && endIdx>=0 && endIdx<bars.length)       // 三尊系: 確定バーまで下り腕を延長
     ctx.lineTo(xAt(endIdx), y(bars[endIdx].c));
   ctx.stroke();ctx.setLineDash([]);
   pivs.forEach(p=>{
-    ctx.fillStyle=pat.dir>0?"#16C784":"#F0B90B";
+    ctx.fillStyle=pat.dir>0?"#16C784":accentColor();
     ctx.beginPath();ctx.arc(xAt(p.i),y(p.p),3.5,0,Math.PI*2);ctx.fill();
   });
   const anc = pat.dir>0
     ? pivs.reduce((a,b)=> b.p<a.p?b:a)
     : pivs.reduce((a,b)=> b.p>a.p?b:a);
-  ctx.fillStyle=pat.dir>0?"#16C784":"#F0B90B";
+  ctx.fillStyle=pat.dir>0?"#16C784":accentColor();
   ctx.font="bold 12px sans-serif";ctx.textAlign="center";
   const lyD=Math.min(Math.max(pat.dir>0 ? y(anc.p)+20 : y(anc.p)-12, pad.t+12), h-pad.b-4);
   ctx.fillText("🔔"+pat.name, xAt(anc.i), lyD);

@@ -7,8 +7,36 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<!--
+THESIS: The verdict is the product — read with the calm authority of a research note,
+not a trading-terminal HUD; refuses this category's neon-glass fintech-dashboard default.
+OWN-WORLD: Warm cream/ink (light) or warm ink/cream (dark), one terracotta accent used only
+for action and emphasis, soft 10-16px radii, mono reserved for real numbers only.
+STORY: A trader recognizes calm, credible research tooling, understands the read-only/
+historical framing immediately, and scans verdicts without eye strain in either theme.
+FIRST VIEWPORT: Eyebrow + Japanese headline in ink, muted one-line lead, theme toggle
+top-right; the data-load card states status in plain language before any numbers.
+FORM: anthropic.com pinned as canon (standing exit), translated for Operate mode + Japanese type.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review,
+the verdict, and DESIGN.md
+-->
+<script>
+(function(){
+  try{
+    var saved = localStorage.getItem("theme");
+    var theme = saved === "light" || saved === "dark"
+      ? saved
+      : (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    document.documentElement.setAttribute("data-theme", theme);
+  }catch(e){ document.documentElement.setAttribute("data-theme","dark"); }
+})();
+</script>
 <div class="wrap">
   <header>
+    <button id="themeToggle" class="theme-toggle" type="button" aria-label="配色をライト/ダークで切り替え" title="ライト/ダーク切り替え">
+      <span class="theme-toggle-icon" aria-hidden="true"></span>
+      <span class="theme-toggle-label"></span>
+    </button>
     <div class="eyebrow">FX相場予測サイト</div>
     <h1>FX<span>相場予測</span>サイト</h1>
     <p class="lead">今のチャートのスクショを貼ると、ローソク足を自動で読み取り、テクニカルパターンを発見して印をつけ、過去の類似局面の統計から「その後」の予想パスを描く。※予測ではなく過去の集計です。1分〜日足の6枠に別々のスクショを貼って同時比較できます。</p>
@@ -59,7 +87,7 @@
       <label class="chk"><input type="checkbox" id="mtfFilter" checked>上位足の向きで絞る<br><span style="font-size:9.5px;opacity:.7">上位足枠のスクショと同じトレンド方向だった過去だけと照合（上位足のスクショが必要）</span></label>
       <button class="clearall" id="clearAllBtn">🗑 全枠クリア</button>
     </div>
-    <p class="v-note">📌 枠をクリックすると<b style="color:var(--gold)">アクティブ（金枠）</b>になり、Cmd+V貼り付け・ページ外へのドロップはアクティブ枠に入ります。枠の中へ直接ドロップしてもOK。</p>
+    <p class="v-note">📌 枠をクリックすると<b>アクティブ</b>になり、Cmd+V貼り付け・ページ外へのドロップはアクティブ枠に入ります。枠の中へ直接ドロップしてもOK。</p>
     <div id="framesWrap"></div>
   </div>
 
@@ -100,8 +128,8 @@
   </div>
 
   <!-- 開発用: URLに #dev を付けた時だけ表示。配布版では非表示。 -->
-  <div class="card" id="devCard" style="display:none;border-color:#3B82F6">
-    <h2 style="color:#3B82F6">🔧 開発用 — 過去データからパターン実例を検証（#dev）</h2>
+  <div class="card" id="devCard" style="display:none;border-color:var(--blue)">
+    <h2 style="color:var(--blue)">🔧 開発用 — 過去データからパターン実例を検証（#dev）</h2>
     <p class="v-note" style="margin-bottom:10px">①でCSVを読み込んだ後、時間足とパターンを選んで「実例を探す」。読み込み済みの過去データから、そのパターンが検出された局面を拾ってチャートに印付きで描画します。スクショ解析を通さないので、フィルタのロジックだけを純粋に確認できます。</p>
     <div class="ctrl-row" style="margin-top:0">
       <div class="ctrl" style="max-width:150px">
@@ -139,6 +167,19 @@
   </footer>
 </div>
 
+<script>
+(function(){
+  var btn = document.getElementById("themeToggle");
+  btn.addEventListener("click", function(){
+    var cur = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+    var next = cur === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    try{ localStorage.setItem("theme", next); }catch(e){}
+    // 既存のresizeリスナー(render.js)がキャンバス群を新しい配色で再描画してくれる
+    window.dispatchEvent(new Event("resize"));
+  });
+})();
+</script>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>
