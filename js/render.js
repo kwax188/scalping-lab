@@ -441,7 +441,7 @@ export function showAutoload(msg, done, total){
   const el = $("autoload");
   el.classList.add("show");
   const pct = total ? Math.round(done/total*100) : 0;
-  el.innerHTML = `📡 ${msg}` + (total ? `<div class="bar"><i style="width:${pct}%"></i></div>` : "");
+  el.innerHTML = `📡 ${msg}` + (total ? `<div class="bar"><i style="transform:scaleX(${pct/100})"></i></div>` : "");
 }
 export function hideAutoload(){ $("autoload").classList.remove("show"); $("autoload").innerHTML=""; }
 
