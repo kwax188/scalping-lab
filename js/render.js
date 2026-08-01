@@ -3,17 +3,25 @@ import { state, $ } from "./state.js";
 import { TFDEF, sdOf } from "./data.js";
 import { clampAnchors, backtestPattern } from "./pattern-search.js";
 
-/* キャンバス描画用アクセント色。CSS変数 --accent をその都度読む(ライト/ダーク切替に追随)。
+/* キャンバス描画用の配色ヘルパー。CSS変数をその都度読むことでライト/ダーク切替に追随する。
    ローソク足本体の赤/青(DMM配色)は画像解析側の色検出と対になるため固定のまま変更しない。 */
-function accentColor(){
-  const v = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
-  return v || "#C1602F";
+function cssVar(name, fallback){
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return v || fallback;
 }
-function accentRGBA(alpha){
-  const hex = accentColor().replace("#","");
+function cssVarRGBA(name, fallback, alpha){
+  const hex = cssVar(name, fallback).replace("#","");
   const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
   return `rgba(${r},${g},${b},${alpha})`;
 }
+const accentColor = () => cssVar("--accent", "#C1602F");
+const accentRGBA  = a => cssVarRGBA("--accent", "#C1602F", a);
+const greenColor  = () => cssVar("--green", "#3F7D52");
+const greenRGBA   = a => cssVarRGBA("--green", "#3F7D52", a);
+const lineRGBA    = a => cssVarRGBA("--line", "#E5DFD1", a);
+const subRGBA     = a => cssVarRGBA("--sub", "#6B6A61", a);
+const subColor    = () => cssVar("--sub", "#6B6A61");
+const blueColor   = () => cssVar("--blue", "#3D6FA6");
 
 /* ============ スクショチャート描画 ============ */
 export function drawShot(F){
@@ -54,7 +62,7 @@ export function drawShot(F){
   const y = v => pad.t + (h-pad.t-pad.b)*(1-(v-lo)/rng);
 
   // grid
-  ctx.strokeStyle="rgba(35,45,69,.6)";
+  ctx.strokeStyle=lineRGBA(.9);
   for(let g=0;g<=4;g++){
     const yy = pad.t + (h-pad.t-pad.b)*g/4;
     ctx.beginPath();ctx.moveTo(pad.l,yy);ctx.lineTo(w-pad.r,yy);ctx.stroke();
@@ -92,7 +100,7 @@ export function drawShot(F){
   for (const {pat, hits} of patterns){
     const hit = hits[hits.length-1];   // 最新の1個
     const dp = clampAnchors(hit.pivs, bars);          // 長すぎる外側アンカーを本体寄りに
-    ctx.strokeStyle = pat.dir>0 ? "rgba(22,199,132,.9)" : accentRGBA(.95);
+    ctx.strokeStyle = pat.dir>0 ? greenRGBA(.9) : accentRGBA(.95);
     ctx.lineWidth=2;
     ctx.setLineDash([3,2]);
     ctx.beginPath();
@@ -104,7 +112,7 @@ export function drawShot(F){
     ctx.stroke();
     ctx.setLineDash([]);
     dp.forEach(p=>{
-      ctx.fillStyle = pat.dir>0 ? "#16C784" : accentColor();
+      ctx.fillStyle = pat.dir>0 ? greenColor() : accentColor();
       ctx.beginPath();
       ctx.arc(xAt(p.i), y(p.p), 3.5, 0, Math.PI*2);
       ctx.fill();
@@ -113,7 +121,7 @@ export function drawShot(F){
     const anc = pat.dir>0
       ? dp.reduce((a,b)=> b.p<a.p?b:a)
       : dp.reduce((a,b)=> b.p>a.p?b:a);
-    ctx.fillStyle = pat.dir>0 ? "#16C784" : accentColor();
+    ctx.fillStyle = pat.dir>0 ? greenColor() : accentColor();
     ctx.font="bold 12px sans-serif"; ctx.textAlign="center";
     const lyS = Math.min(Math.max(pat.dir>0 ? y(anc.p)+20 : y(anc.p)-12, pad.t+12), h-pad.b-4);
     ctx.fillText("🔔"+pat.name, xAt(anc.i), lyS);
@@ -444,12 +452,12 @@ export function renderDraw(dc, drawPts){
   const w = dc.width/dpr, h = dc.height/dpr;
   ctx.clearRect(0,0,w,h);
   if (!drawPts.length){
-    ctx.fillStyle="rgba(138,148,172,.5)";
+    ctx.fillStyle=subRGBA(.6);
     ctx.font="12px sans-serif"; ctx.textAlign="center";
     ctx.fillText("ここに値動きの形を描く（左→右）", w/2, h/2);
     return;
   }
-  ctx.strokeStyle="#3B82F6"; ctx.lineWidth=2.5; ctx.lineJoin="round"; ctx.lineCap="round";
+  ctx.strokeStyle=blueColor(); ctx.lineWidth=2.5; ctx.lineJoin="round"; ctx.lineCap="round";
   ctx.beginPath();
   drawPts.forEach((p,i)=> i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
   ctx.stroke();
@@ -475,14 +483,14 @@ export function drawGhost(paths, FWD){
   const pad={l:8,r:56,t:8,b:18};
   const x=i=>pad.l+(w-pad.l-pad.r)*i/FWD;
   const y=v=>pad.t+(h-pad.t-pad.b)*(1-(v-lo)/rng);
-  ctx.strokeStyle="rgba(138,148,172,.4)";ctx.setLineDash([3,3]);
+  ctx.strokeStyle=subRGBA(.5);ctx.setLineDash([3,3]);
   ctx.beginPath();ctx.moveTo(pad.l,y(0));ctx.lineTo(w-pad.r,y(0));ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle="#8A94AC";ctx.font="10px SF Mono,Consolas,monospace";
+  ctx.fillStyle=subColor();ctx.font="10px SF Mono,Consolas,monospace";
   ctx.fillText("0%", w-pad.r+6, y(0)+3);
   ctx.fillText((hi*100).toFixed(2)+"%", w-pad.r+6, y(hi)+3);
   ctx.fillText((lo*100).toFixed(2)+"%", w-pad.r+6, y(lo)+3);
-  ctx.strokeStyle="rgba(138,148,172,.16)";
+  ctx.strokeStyle=subRGBA(.2);
   ctx.lineWidth=1;
   paths.forEach(p=>{
     ctx.beginPath();
@@ -513,7 +521,7 @@ export function drawDevChart(bars, pivs, endIdx, pat, ext){
   const xAt=i=>pad.l+bw*i+bw/2;
   const y=v=>pad.t+(h-pad.t-pad.b)*(1-(v-lo)/rng);
   // grid
-  ctx.strokeStyle="rgba(35,45,69,.6)";
+  ctx.strokeStyle=lineRGBA(.9);
   for(let g=0;g<=4;g++){const yy=pad.t+(h-pad.t-pad.b)*g/4;ctx.beginPath();ctx.moveTo(pad.l,yy);ctx.lineTo(w-pad.r,yy);ctx.stroke();}
   // 確定バーの縦線
   if(endIdx>=0&&endIdx<bars.length){
@@ -535,20 +543,20 @@ export function drawDevChart(bars, pivs, endIdx, pat, ext){
     ctx.fillRect(x-bwid/2,bt,bwid,Math.max(1.2,bb-bt));
   });
   // ピボット線
-  ctx.strokeStyle=pat.dir>0?"rgba(22,199,132,.9)":accentRGBA(.95);
+  ctx.strokeStyle=pat.dir>0?greenRGBA(.9):accentRGBA(.95);
   ctx.lineWidth=2;ctx.setLineDash([3,2]);ctx.beginPath();
   pivs.forEach((p,k)=>{k?ctx.lineTo(xAt(p.i),y(p.p)):ctx.moveTo(xAt(p.i),y(p.p));});
   if(ext && endIdx>=0 && endIdx<bars.length)       // 三尊系: 確定バーまで下り腕を延長
     ctx.lineTo(xAt(endIdx), y(bars[endIdx].c));
   ctx.stroke();ctx.setLineDash([]);
   pivs.forEach(p=>{
-    ctx.fillStyle=pat.dir>0?"#16C784":accentColor();
+    ctx.fillStyle=pat.dir>0?greenColor():accentColor();
     ctx.beginPath();ctx.arc(xAt(p.i),y(p.p),3.5,0,Math.PI*2);ctx.fill();
   });
   const anc = pat.dir>0
     ? pivs.reduce((a,b)=> b.p<a.p?b:a)
     : pivs.reduce((a,b)=> b.p>a.p?b:a);
-  ctx.fillStyle=pat.dir>0?"#16C784":accentColor();
+  ctx.fillStyle=pat.dir>0?greenColor():accentColor();
   ctx.font="bold 12px sans-serif";ctx.textAlign="center";
   const lyD=Math.min(Math.max(pat.dir>0 ? y(anc.p)+20 : y(anc.p)-12, pad.t+12), h-pad.b-4);
   ctx.fillText("🔔"+pat.name, xAt(anc.i), lyD);
