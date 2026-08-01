@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-01T06:03:03Z",
+  "title": "Design System: FX相場予測サイト (Scalping Lab)",
+  "extensions": {
+    "colorMeta": {
+      "warm-paper":       { "role": "neutral", "displayName": "Warm Paper",       "canonical": "#FAF9F5", "dark": "#1B1A16" },
+      "paper-alt":        { "role": "neutral", "displayName": "Paper Alt",        "canonical": "#F3F1EA", "dark": "#221F19" },
+      "panel":            { "role": "neutral", "displayName": "Panel",            "canonical": "#FFFFFF", "dark": "#211F19" },
+      "panel-alt":        { "role": "neutral", "displayName": "Panel Alt",        "canonical": "#F3F1EA", "dark": "#28251E" },
+      "line":             { "role": "neutral", "displayName": "Line",             "canonical": "#E5DFD1", "dark": "#3A362B" },
+      "ink":              { "role": "neutral", "displayName": "Ink",              "canonical": "#1A1A18", "dark": "#F3F1EA" },
+      "ink-muted":        { "role": "neutral", "displayName": "Ink Muted",        "canonical": "#6B6A61", "dark": "#A6A395" },
+      "ink-faint":        { "role": "neutral", "displayName": "Ink Faint",        "canonical": "#9B9A8F", "dark": "#726F62" },
+      "terracotta":       { "role": "primary", "displayName": "Terracotta",       "canonical": "#C1602F", "dark": "#E08556" },
+      "terracotta-soft":  { "role": "primary", "displayName": "Terracotta Soft",  "canonical": "rgba(193,96,47,.10)", "dark": "rgba(224,133,86,.14)" },
+      "terracotta-text":  { "role": "primary", "displayName": "Terracotta Text",  "canonical": "#9A4620", "dark": "var(--accent) (#E08556)", "note": "Accessible split-off of terracotta for text/button-background use; see The Split-Accent Rule." },
+      "button-ink":       { "role": "primary", "displayName": "Button Ink",       "canonical": "#FFFFFF", "dark": "#1B1A16" },
+      "info-blue":        { "role": "secondary", "displayName": "Info Blue",      "canonical": "#3D6FA6", "dark": "#7FA8D6" },
+      "verdict-up":       { "role": "semantic", "displayName": "Verdict Up",      "canonical": "#3F7D52", "dark": "#6FBE8D" },
+      "verdict-up-soft":  { "role": "semantic", "displayName": "Verdict Up Soft", "canonical": "rgba(63,125,82,.09)", "dark": "rgba(111,190,141,.12)" },
+      "verdict-down":     { "role": "semantic", "displayName": "Verdict Down",    "canonical": "#B23B3B", "dark": "#E17272" },
+      "verdict-down-soft":{ "role": "semantic", "displayName": "Verdict Down Soft", "canonical": "rgba(178,59,59,.08)", "dark": "rgba(225,114,114,.10)" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "The single page <h1> only; serif, accent-colored span inside it." },
+      "title":   { "displayName": "Title", "purpose": "Card headings and frame titles — section/slot scaffolding." },
+      "body":    { "displayName": "Body", "purpose": "Lead paragraph, hints, notes, footer disclaimer." },
+      "label":   { "displayName": "Label", "purpose": "Field labels, badges, gallery meta captions." },
+      "numeric": { "displayName": "Numeric", "purpose": "Verdict percentages and all real statistics; mono, highest-emphasis role in the system." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "state-fade", "value": "opacity/border-color/color transitions, .15s-.2s ease (default)", "purpose": "All hover/focus/theme-switch transitions in the system; no motion beyond simple property fades. No transform-based hover (except gallery dot scale)." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "420px", "purpose": "Below this, verdict stat grid and button rows collapse to single column; card padding drops 22px -> 16px." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Default call-to-action button (e.g. the drop/upload triggers, primary form actions).",
+      "html": "<button class=\"ds-btn\">保存する</button>",
+      "css": ".ds-btn{display:block;width:100%;background:var(--accent-text,#9A4620);color:var(--btn-text,#FFFFFF);border:none;border-radius:8px;padding:13px;font-size:14px;font-weight:700;letter-spacing:.01em;cursor:pointer;transition:opacity .15s} .ds-btn:hover{opacity:.9} .ds-btn:focus-visible{outline:2px solid var(--accent-text,#9A4620);outline-offset:2px} .ds-btn:disabled{opacity:.35;cursor:not-allowed}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Second action tier (e.g. hand-drawn pattern search) — same shape as primary, blue fill.",
+      "html": "<button class=\"ds-btn-blue\">検索する</button>",
+      "css": ".ds-btn-blue{display:block;width:100%;background:var(--blue,#3D6FA6);color:var(--btn-text,#FFFFFF);border:none;border-radius:8px;padding:13px;font-size:14px;font-weight:700;letter-spacing:.01em;cursor:pointer;transition:opacity .15s} .ds-btn-blue:hover{opacity:.9} .ds-btn-blue:focus-visible{outline:2px solid var(--accent-text,#9A4620);outline-offset:2px}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Low-emphasis secondary action (clear, cancel).",
+      "html": "<button class=\"ds-btn-ghost\">クリア</button>",
+      "css": ".ds-btn-ghost{display:block;width:100%;background:transparent;color:var(--sub,#6B6A61);border:1px solid var(--line,#E5DFD1);border-radius:8px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;transition:border-color .15s,color .15s} .ds-btn-ghost:hover{border-color:var(--sub,#6B6A61);color:var(--text,#1A1A18)} .ds-btn-ghost:focus-visible{outline:2px solid var(--accent-text,#9A4620);outline-offset:2px}"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Top-level content section container.",
+      "html": "<div class=\"ds-card\"><h2 class=\"ds-card-title\">セクション見出し</h2><p class=\"ds-card-body\">本文テキスト。</p></div>",
+      "css": ".ds-card{background:var(--panel,#FFFFFF);border:1px solid var(--line,#E5DFD1);border-radius:16px;padding:22px} .ds-card-title{font-size:15px;font-weight:800;letter-spacing:.01em;color:var(--text,#1A1A18);margin-bottom:16px} .ds-card-body{font-size:13.5px;color:var(--sub,#6B6A61);line-height:1.8}"
+    },
+    {
+      "name": "Verdict Readout",
+      "kind": "custom",
+      "description": "The single most important element in the product: up/down/flat historical outcome statistics.",
+      "html": "<div class=\"ds-verdict\"><div class=\"ds-v-head\">▶ この形のあと相場はどうなった?</div><div class=\"ds-v-main\">50本後: <span class=\"ds-up\">上昇42%</span> / <span class=\"ds-down\">下落38%</span> / <span class=\"ds-flat\">横ばい20%</span></div><div class=\"ds-v-sub\">過去の集計であり予測ではない。</div></div>",
+      "css": ".ds-verdict{background:var(--panel2,#F3F1EA);border:1px solid var(--line,#E5DFD1);border-radius:12px;padding:14px 16px;line-height:1.8} .ds-v-head{font-size:12px;color:var(--sub,#6B6A61);margin-bottom:4px} .ds-v-main{font-family:\"SF Mono\",Consolas,Menlo,monospace;font-size:clamp(16px,4vw,22px);font-weight:800} .ds-up{color:var(--green,#3F7D52)} .ds-down{color:var(--red,#B23B3B)} .ds-flat{color:var(--sub,#6B6A61)} .ds-v-sub{font-size:11.5px;color:var(--sub,#6B6A61);margin-top:5px}"
+    },
+    {
+      "name": "Pattern Alert",
+      "kind": "custom",
+      "description": "Detected chart-pattern notice: soft tint + direction dot, not a border side-tab.",
+      "html": "<div class=\"ds-alert ds-alert-up\"><div class=\"ds-a-body\"><div class=\"ds-a-name\"><span class=\"ds-dot\"></span>ダブルボトム をスクショ内に発見</div><div class=\"ds-a-stat\">類似87件中 <b class=\"ds-up\">上昇62%</b></div></div></div>",
+      "css": ".ds-alert{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line,#E5DFD1);border-radius:8px;padding:12px 14px} .ds-alert-up{background:var(--green-soft,rgba(63,125,82,.09));border-color:rgba(63,125,82,.35)} .ds-a-name{font-size:13px;font-weight:700} .ds-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;background:var(--green,#3F7D52)} .ds-a-stat{font-size:11.5px;color:var(--sub,#6B6A61);margin-top:4px;font-family:\"SF Mono\",Consolas,Menlo,monospace} .ds-up{color:var(--green,#3F7D52)}"
+    },
+    {
+      "name": "Select Input",
+      "kind": "input",
+      "refersTo": "select-input",
+      "description": "Standard control dropdown (window length, forward bars, timeframe).",
+      "html": "<div class=\"ds-ctrl\"><label class=\"ds-ctrl-label\">類似検索する形の長さ</label><select class=\"ds-select\"><option>100本</option></select></div>",
+      "css": ".ds-ctrl-label{display:block;font-size:11.5px;color:var(--sub,#6B6A61);margin-bottom:6px} .ds-select{width:100%;background:var(--panel2,#F3F1EA);border:1px solid var(--line,#E5DFD1);border-radius:8px;color:var(--text,#1A1A18);font-size:13.5px;padding:9px 10px;outline:none;transition:border-color .15s} .ds-select:focus{border-color:var(--accent,#C1602F)}"
+    },
+    {
+      "name": "Theme Toggle",
+      "kind": "custom",
+      "description": "The one persistent nav-adjacent chrome control; the sole fully-pill shape in the system.",
+      "html": "<button class=\"ds-toggle\"><span class=\"ds-toggle-icon\">☀️</span><span>ライト</span></button>",
+      "css": ".ds-toggle{display:flex;align-items:center;gap:7px;background:var(--panel,#FFFFFF);border:1px solid var(--line,#E5DFD1);border-radius:999px;padding:7px 13px 7px 11px;font-size:12px;font-weight:600;color:var(--sub,#6B6A61);cursor:pointer;transition:border-color .15s,color .15s} .ds-toggle:hover{border-color:var(--accent,#C1602F);color:var(--text,#1A1A18)} .ds-toggle-icon{font-size:14px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Calm Research Note",
+    "overview": "This is a statistics toy that reads like a research note, not a trading-terminal HUD — that's the thesis the build carries out. A single warm neutral (cream paper in light mode, warm ink in dark mode) holds the page; one terracotta accent is spent only on action and emphasis; every other hue (green/red for up/down, blue for secondary actions) is semantic, never decorative. The system explicitly refuses this category's default: no neon-glass panels, no dashboard chrome, no box-shadow anywhere. Depth comes from nesting flat background tones (panel → panel-alt → bg-alt → bg) behind hairline borders, the same device a printed research note would use for a table, not a HUD would use for a widget.\n\nThe build is a translation, not a literal copy, of anthropic.com's voice: the direction contract pins anthropic.com as canon, but the site is Japanese-first and ships with zero build step (a hard product constraint — plain files straight to a static host), so the custom \"Anthropic Serif\"/\"Anthropic Sans\" webfonts — which don't cover Japanese glyphs and aren't licensed for reuse here — are stood in for by a system Japanese font stack, with a real Japanese serif reserved for the one display headline. This is a deliberate, cited adaptation of the pinned world, not drift from it.\n\nThe single most important thing on the page is the verdict readout (up/down/flat percentages after a similar historical pattern) — per product principle, this must never get harder to read in the name of aesthetics. Every other visual decision in this system is subordinate to that one.",
+    "keyCharacteristics": [
+      "One accent (terracotta) for action and emphasis; everything else is neutral or semantic",
+      "Flat, bordered, tonally-layered — no shadows, no elevation, no glass",
+      "Soft radii throughout (8–16px); nothing sharp, nothing pill-shaped except the theme toggle",
+      "Monospace is reserved exclusively for real numbers; never for labels or headings",
+      "Light and dark are both first-class, built as a mirrored token pair, not a dark-mode afterthought"
+    ],
+    "rules": [
+      { "name": "The Split-Accent Rule", "body": "Never use --accent where it functions as text or a button background — use --accent-text (and pair button backgrounds with --btn-text) instead. --accent alone is for borders, large glyphs, and other ≥3:1-sufficient uses only.", "section": "colors" },
+      { "name": "The Verdict-Color Rule", "body": "Green and red exist in this system to mean \"statistically up\" and \"statistically down,\" full stop. They do not appear as generic UI accent, success/error chrome, or decoration.", "section": "colors" },
+      { "name": "The Numbers-Only Mono Rule", "body": "--mono is reserved for real numeric/data output — verdict percentages, sample counts, dates, gallery ranks. It never appears on a label, heading, or button.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "Surfaces never cast a shadow. If a surface needs to read as \"above\" or \"inside\" another, that's expressed by a background-tone step and a hairline border, not by elevation.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do pair any accent-on-text or accent-as-button-background use with --accent-text/--btn-text, never raw --accent (The Split-Accent Rule).",
+      "Do keep --mono exclusive to real numeric output — verdict percentages, sample sizes, dates, ranks (The Numbers-Only Mono Rule).",
+      "Do signal a detected pattern's direction with a soft tint + small dot, matching the current .alert/.alert.up/.alert.down treatment.",
+      "Do keep the six-frame comparator single-column and vertically stacked rather than a grid — the linear \"research note\" reading order is deliberate.",
+      "Do treat #EA3943/#3B82F6 candle colors in js/render.js as fixed and non-thematic (see Colors → Fixed Exception)."
+    ],
+    "donts": [
+      "Don't add box-shadow or any lifted/glassy surface treatment anywhere — depth is tonal layering only (The Flat-By-Default Rule).",
+      "Don't put a colored left-border \"side-tab\" on an alert or card to signal state — that device was tried and explicitly rejected in finish review.",
+      "Don't add an eyebrow/kicker line above a heading — removed as a banned device for this world; headings stand alone.",
+      "Don't alias the candle chart's #EA3943/#3B82F6 to the theme's --red/--blue tokens, or make them theme-aware — js/image-extract.js depends on these exact literal hues to read screenshots.",
+      "Don't treat the current emoji glyphs (📂🗑✏️🔍📌🔧🌙☀️, etc.) as this system's icon language for new components — carried defect from this build, not a confirmed system rule."
+    ]
+  }
+}
