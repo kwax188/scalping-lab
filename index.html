@@ -82,8 +82,8 @@ the verdict, and DESIGN.md
           <option value="50" selected>50本</option>
         </select>
       </div>
-      <label class="chk"><input type="checkbox" id="maFilter" checked>MA状態で絞る<br><span style="font-size:9.5px;opacity:.7">MA25との位置関係と傾きが同じ過去だけと照合</span></label>
-      <label class="chk"><input type="checkbox" id="mtfFilter" checked>上位足の向きで絞る<br><span style="font-size:9.5px;opacity:.7">上位足枠のスクショと同じトレンド方向だった過去だけと照合（上位足のスクショが必要）</span></label>
+      <label class="chk"><input type="checkbox" id="maFilter" checked>MA状態で絞る<br><span class="chk-hint">MA25との位置関係と傾きが同じ過去だけと照合</span></label>
+      <label class="chk"><input type="checkbox" id="mtfFilter" checked>上位足の向きで絞る<br><span class="chk-hint">上位足枠のスクショと同じトレンド方向だった過去だけと照合（上位足のスクショが必要）</span></label>
       <button class="clearall" id="clearAllBtn">🗑 全枠クリア</button>
     </div>
     <p class="v-note">📌 枠をクリックすると<b>アクティブ</b>になり、Cmd+V貼り付け・ページ外へのドロップはアクティブ枠に入ります。枠の中へ直接ドロップしてもOK。</p>
@@ -146,7 +146,7 @@ the verdict, and DESIGN.md
         <label>パターン</label>
         <select id="devPat"></select>
       </div>
-      <label class="chk"><input type="checkbox" id="devFilter" checked>文脈フィルタON<br><span style="font-size:9.5px;opacity:.7">OFFにすると構造判定のみ(文脈フィルタなし)で比較</span></label>
+      <label class="chk"><input type="checkbox" id="devFilter" checked>文脈フィルタON<br><span class="chk-hint">OFFにすると構造判定のみ(文脈フィルタなし)で比較</span></label>
     </div>
     <div class="btn-row" style="grid-template-columns:1fr 1fr 1fr">
       <button class="btn blue" id="devFindBtn">🔍 実例を探す</button>

@@ -165,7 +165,7 @@ export function updateVerdict(F){
   const dirArrow = d => d>0 ? "↑" : d<0 ? "↓" : "→";
   let mtfTag = "";
   if (res.mtf && res.mtf.length){
-    mtfTag = `・上位足一致 <b style="color:var(--accent)">${res.mtf.map(m=>m.key+dirArrow(m.dir)).join(" / ")}</b>`;
+    mtfTag = `・上位足一致 <b style="color:var(--accent-text)">${res.mtf.map(m=>m.key+dirArrow(m.dir)).join(" / ")}</b>`;
   } else if (res.mtfFallback){
     mtfTag = `・<span style="opacity:.75">上位足一致は母数不足のため解除</span>`;
   }
