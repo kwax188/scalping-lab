@@ -197,7 +197,7 @@ export function updatePatList(F){
     }
     div.innerHTML = `
       <div class="a-body">
-        <div class="a-name">🔔 ${pat.name} をスクショ内に発見（チャート上に表示）</div>
+        <div class="a-name"><span class="dir-dot"></span>🔔 ${pat.name} をスクショ内に発見（チャート上に表示）</div>
         <div class="a-stat">${statHtml}</div>
       </div>`;
     wrap.appendChild(div);
