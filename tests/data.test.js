@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseCSV, resample, pctSeries, znorm, sdOf, dist, maSeries, trendDir } from "../js/data.js";
+import { parseCSV, parseBin, resample, pctSeries, znorm, sdOf, dist, maSeries, trendDir } from "../js/data.js";
 
 function closeTo(actual, expected, eps = 1e-9){
   assert.ok(Math.abs(actual - expected) < eps,
@@ -88,4 +88,33 @@ test("trendDir: 方向感なしなら0", () => {
 });
 test("trendDir: MAが無ければnull", () => {
   assert.equal(trendDir(10, null, 9), null);
+});
+
+test("parseBin: SoAバイナリ形式(N=2)をM1配列にデコードする", () => {
+  // フォーマット: [Int32 N][Int32×N minuteIndex][F32×N o][F32×N h][F32×N l][F32×N c]
+  const n = 2;
+  const buf = new ArrayBuffer(4 + n*20);
+  const dv = new DataView(buf);
+  let off = 0;
+  dv.setInt32(off, n, true); off += 4;
+  // minuteIndex (t = minuteIndex * 60000)
+  dv.setInt32(off, 100000, true); off += 4;
+  dv.setInt32(off, 100001, true); off += 4;
+  // o, h, l, c は Float32 で丸め誤差なく往復する値を選ぶ(2進小数)
+  const o = [1.5, 1.25], h = [1.75, 1.375], l = [1.125, 1.0], c = [1.625, 1.0625];
+  for (const v of o){ dv.setFloat32(off, v, true); off += 4; }
+  for (const v of h){ dv.setFloat32(off, v, true); off += 4; }
+  for (const v of l){ dv.setFloat32(off, v, true); off += 4; }
+  for (const v of c){ dv.setFloat32(off, v, true); off += 4; }
+
+  const out = parseBin(buf);
+  assert.equal(out.length, 2);
+  assert.deepEqual(out[0], {t: 100000*60000, o: 1.5, h: 1.75, l: 1.125, c: 1.625});
+  assert.deepEqual(out[1], {t: 100001*60000, o: 1.25, h: 1.375, l: 1, c: 1.0625});
+});
+
+test("parseBin: ヘッダ不正(N<=0)なら例外を投げる", () => {
+  const buf = new ArrayBuffer(4);
+  new DataView(buf).setInt32(0, 0, true);
+  assert.throws(() => parseBin(buf), /binヘッダ不正/);
 });
