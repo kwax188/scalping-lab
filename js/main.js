@@ -4,7 +4,10 @@ import { idbSaveM1, idbLoadM1, idbClearM1 } from "./storage.js";
 import { TFDEF, parseCSV, parseBin, resample, znorm } from "./data.js";
 import { PATTERNS, atrOf, zigzagAbs, getMA25, clampAnchors, searchTop } from "./pattern-search.js";
 import { loadChartImage, reanalyzeLower, analyzeShot } from "./image-extract.js";
-import { updateGallery } from "./render.js";
+import {
+  updateGallery, frameMarkup, updateDataUI, showAutoload, hideAutoload,
+  renderDraw, drawCanvasInit, drawGhost, drawDevChart,
+} from "./render.js";
 
 const drop = $("drop");
 drop.addEventListener("dragover", e=>{e.preventDefault();e.stopPropagation();drop.classList.add("over")});
@@ -21,25 +24,6 @@ function rebuildFrames(){
   for (const k in state.maCache) delete state.maCache[k];
   for (const tf of TFDEF) state.frames[tf.key] = resample(state.M1, tf.min);
 }
-// 読み込み状況・保存済みデータ範囲の表示を更新
-function updateDataUI(){
-  if (!state.M1.length){
-    $("datastat").classList.remove("show");
-    $("dbbox").classList.remove("show");
-    return;
-  }
-  const d0 = new Date(state.M1[0].t), d1 = new Date(state.M1[state.M1.length-1].t);
-  const fd = d => `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
-  const fym = d => `${d.getFullYear()}/${d.getMonth()+1}`;
-  $("datastat").innerHTML =
-    `✅ <b>${state.M1.length.toLocaleString()}本</b>の1分足（${fd(d0)} 〜 ${fd(d1)}）` +
-    `<br>生成: ` + TFDEF.map(tf=>`${tf.key} ${state.frames[tf.key].length.toLocaleString()}本`).join(" / ");
-  $("datastat").classList.add("show");
-  $("dbinfo").innerHTML =
-    `💾 保存済みデータ: <b>${fym(d0)} 〜 ${fym(d1)}</b> ／ <b>${state.M1.length.toLocaleString()}</b>件（1分足）`;
-  $("dbbox").classList.add("show");
-}
-
 async function loadFiles(files){
   const all = state.M1.slice();
   for (const f of files){
@@ -80,24 +64,7 @@ function buildSlots(){
   for (const tf of TFDEF){
     const root = document.createElement("div");
     root.className = "frame";
-    root.innerHTML = `
-      <div class="f-head">
-        <div class="f-title">${tf.key}足<span>${tf.key==="日足"?"1D":tf.min+"m"}</span></div>
-        <div class="f-badge"></div>
-        <button class="f-clear">クリア</button>
-      </div>
-      <label class="drop mini">
-        <div class="d-main">📷 ${tf.key}足のスクショをドロップ / クリックで選択</div>
-        <input type="file" accept="image/*">
-      </label>
-      <div class="loading">解析中...</div>
-      <div class="f-area" style="display:none">
-        <canvas class="f-canvas" width="920" height="340"></canvas>
-        <div class="verdict"></div>
-        <div class="f-patlist"></div>
-      </div>
-      <div class="v-note f-stat" style="margin-top:6px"></div>
-      <div class="f-gallery"></div>`;
+    root.innerHTML = frameMarkup(tf);
     wrap.appendChild(root);
 
     const F = {
@@ -185,14 +152,6 @@ document.addEventListener("paste", e=>{
 buildSlots();
 
 /* ============ バイナリ自動ロード(同一リポジトリ data/) ============ */
-function showAutoload(msg, done, total){
-  const el = $("autoload");
-  el.classList.add("show");
-  const pct = total ? Math.round(done/total*100) : 0;
-  el.innerHTML = `📡 ${msg}` + (total ? `<div class="bar"><i style="width:${pct}%"></i></div>` : "");
-}
-function hideAutoload(){ $("autoload").classList.remove("show"); $("autoload").innerHTML=""; }
-
 /* manifest.json → 各 m1_*.bin を順次 fetch → M1 構築 → IndexedDB 保存。
    fetch できない環境(file:// ローカル起動・ファイル無し)は例外を投げ、
    呼び出し側が従来のCSV手動ドロップにフォールバックする。 */
@@ -280,42 +239,20 @@ const dc = $("draw");
 let drawPts = [];
 let drawing = false;
 
-function drawCanvasInit(){
-  const dpr = window.devicePixelRatio||1;
-  dc.width = dc.clientWidth*dpr; dc.height = 140*dpr;
-  dc.getContext("2d").scale(dpr,dpr);
-  renderDraw();
-}
-function renderDraw(){
-  const ctx = dc.getContext("2d");
-  const dpr = window.devicePixelRatio||1;
-  const w = dc.width/dpr, h = dc.height/dpr;
-  ctx.clearRect(0,0,w,h);
-  if (!drawPts.length){
-    ctx.fillStyle="rgba(138,148,172,.5)";
-    ctx.font="12px sans-serif"; ctx.textAlign="center";
-    ctx.fillText("ここに値動きの形を描く（左→右）", w/2, h/2);
-    return;
-  }
-  ctx.strokeStyle="#3B82F6"; ctx.lineWidth=2.5; ctx.lineJoin="round"; ctx.lineCap="round";
-  ctx.beginPath();
-  drawPts.forEach((p,i)=> i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
-  ctx.stroke();
-}
 function dPos(e){
   const r = dc.getBoundingClientRect();
   const src = e.touches ? e.touches[0] : e;
   return {x: src.clientX-r.left, y: src.clientY-r.top};
 }
-dc.addEventListener("mousedown", e=>{drawing=true; drawPts.push(dPos(e)); renderDraw()});
-dc.addEventListener("mousemove", e=>{if(drawing){drawPts.push(dPos(e)); renderDraw()}});
+dc.addEventListener("mousedown", e=>{drawing=true; drawPts.push(dPos(e)); renderDraw(dc, drawPts)});
+dc.addEventListener("mousemove", e=>{if(drawing){drawPts.push(dPos(e)); renderDraw(dc, drawPts)}});
 window.addEventListener("mouseup", ()=>drawing=false);
-dc.addEventListener("touchstart", e=>{e.preventDefault();drawing=true;drawPts.push(dPos(e));renderDraw()},{passive:false});
-dc.addEventListener("touchmove", e=>{e.preventDefault();if(drawing){drawPts.push(dPos(e));renderDraw()}},{passive:false});
+dc.addEventListener("touchstart", e=>{e.preventDefault();drawing=true;drawPts.push(dPos(e));renderDraw(dc, drawPts)},{passive:false});
+dc.addEventListener("touchmove", e=>{e.preventDefault();if(drawing){drawPts.push(dPos(e));renderDraw(dc, drawPts)}},{passive:false});
 window.addEventListener("touchend", ()=>drawing=false);
-$("drawClearBtn").onclick = ()=>{drawPts=[]; renderDraw()};
-window.addEventListener("resize", drawCanvasInit);
-drawCanvasInit();
+$("drawClearBtn").onclick = ()=>{drawPts=[]; renderDraw(dc, drawPts)};
+window.addEventListener("resize", ()=>drawCanvasInit(dc, drawPts));
+drawCanvasInit(dc, drawPts);
 
 $("drawSearchBtn").onclick = ()=>{
   if (drawPts.length < 8){ alert("形が短すぎます。左から右へ線を描いてください。"); return; }
@@ -366,44 +303,6 @@ $("drawSearchBtn").onclick = ()=>{
     drawGhost(res.paths, FWD);
   }, 30);
 };
-
-function drawGhost(paths, FWD){
-  const c=$("ghost");
-  const dpr=window.devicePixelRatio||1;
-  const w=c.clientWidth,h=190;
-  c.width=w*dpr;c.height=h*dpr;
-  const ctx=c.getContext("2d");
-  ctx.scale(dpr,dpr);
-  ctx.clearRect(0,0,w,h);
-  let lo=0,hi=0;
-  paths.forEach(p=>p.forEach(v=>{lo=Math.min(lo,v);hi=Math.max(hi,v)}));
-  const rng=Math.max(1e-9,hi-lo);
-  const pad={l:8,r:56,t:8,b:18};
-  const x=i=>pad.l+(w-pad.l-pad.r)*i/FWD;
-  const y=v=>pad.t+(h-pad.t-pad.b)*(1-(v-lo)/rng);
-  ctx.strokeStyle="rgba(138,148,172,.4)";ctx.setLineDash([3,3]);
-  ctx.beginPath();ctx.moveTo(pad.l,y(0));ctx.lineTo(w-pad.r,y(0));ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle="#8A94AC";ctx.font="10px SF Mono,Consolas,monospace";
-  ctx.fillText("0%", w-pad.r+6, y(0)+3);
-  ctx.fillText((hi*100).toFixed(2)+"%", w-pad.r+6, y(hi)+3);
-  ctx.fillText((lo*100).toFixed(2)+"%", w-pad.r+6, y(lo)+3);
-  ctx.strokeStyle="rgba(138,148,172,.16)";
-  ctx.lineWidth=1;
-  paths.forEach(p=>{
-    ctx.beginPath();
-    p.forEach((v,i)=> i?ctx.lineTo(x(i),y(v)):ctx.moveTo(x(i),y(v)));
-    ctx.stroke();
-  });
-  const mean=[];
-  for(let i=0;i<=FWD;i++){
-    let s=0; paths.forEach(p=>s+=p[i]); mean.push(s/paths.length);
-  }
-  ctx.strokeStyle="#F0B90B";ctx.lineWidth=2.5;
-  ctx.beginPath();
-  mean.forEach((v,i)=> i?ctx.lineTo(x(i),y(v)):ctx.moveTo(x(i),y(v)));
-  ctx.stroke();
-}
 
 /* ============ 開発用: 過去データからのパターン自己テスト(#dev) ============ */
 (function initDev(){
@@ -491,61 +390,6 @@ function drawGhost(paths, FWD){
       (after!==null ? ` → 確定10本後 ${after>=0?"+":""}${after.toFixed(3)}%` : "");
     $("devPrevBtn").disabled = devIdx<=0;
     $("devNextBtn").disabled = devIdx>=devHits.length-1;
-  }
-
-  // dev専用の軽量チャート描画(ローソク + ピボット線 + ラベル)
-  function drawDevChart(bars, pivs, endIdx, pat, ext){
-    const c = $("devCanvas");
-    const dpr = window.devicePixelRatio||1;
-    const w = c.clientWidth, h = 340;
-    c.width=w*dpr; c.height=h*dpr;
-    const ctx=c.getContext("2d"); ctx.scale(dpr,dpr); ctx.clearRect(0,0,w,h);
-    const pad={l:10,r:14,t:16,b:14};
-    let lo=Math.min(...bars.map(b=>b.l)), hi=Math.max(...bars.map(b=>b.h));
-    const rng=Math.max(1e-9,hi-lo);
-    const bw=(w-pad.l-pad.r)/bars.length;
-    const xAt=i=>pad.l+bw*i+bw/2;
-    const y=v=>pad.t+(h-pad.t-pad.b)*(1-(v-lo)/rng);
-    // grid
-    ctx.strokeStyle="rgba(35,45,69,.6)";
-    for(let g=0;g<=4;g++){const yy=pad.t+(h-pad.t-pad.b)*g/4;ctx.beginPath();ctx.moveTo(pad.l,yy);ctx.lineTo(w-pad.r,yy);ctx.stroke();}
-    // 確定バーの縦線
-    if(endIdx>=0&&endIdx<bars.length){
-      const bx=xAt(endIdx);
-      ctx.strokeStyle="rgba(240,185,11,.3)";ctx.setLineDash([4,4]);
-      ctx.beginPath();ctx.moveTo(bx,pad.t);ctx.lineTo(bx,h-pad.b);ctx.stroke();ctx.setLineDash([]);
-      ctx.fillStyle="rgba(240,185,11,.8)";ctx.font="10px sans-serif";ctx.textAlign="left";
-      ctx.fillText("← パターン確定", bx+4, pad.t+10);
-    }
-    // ローソク(DMM配色: 陽線=赤/陰線=青)
-    bars.forEach((b,i)=>{
-      const col=b.c>=b.o?"#EA3943":"#3B82F6";
-      const x=xAt(i);
-      ctx.strokeStyle=col;ctx.lineWidth=Math.max(1,bw*0.14);
-      ctx.beginPath();ctx.moveTo(x,y(b.h));ctx.lineTo(x,y(b.l));ctx.stroke();
-      ctx.fillStyle=col;
-      const bt=y(Math.max(b.o,b.c)),bb=y(Math.min(b.o,b.c));
-      const bwid=Math.max(2,bw*0.62);
-      ctx.fillRect(x-bwid/2,bt,bwid,Math.max(1.2,bb-bt));
-    });
-    // ピボット線
-    ctx.strokeStyle=pat.dir>0?"rgba(22,199,132,.9)":"rgba(240,185,11,.95)";
-    ctx.lineWidth=2;ctx.setLineDash([3,2]);ctx.beginPath();
-    pivs.forEach((p,k)=>{k?ctx.lineTo(xAt(p.i),y(p.p)):ctx.moveTo(xAt(p.i),y(p.p));});
-    if(ext && endIdx>=0 && endIdx<bars.length)       // 三尊系: 確定バーまで下り腕を延長
-      ctx.lineTo(xAt(endIdx), y(bars[endIdx].c));
-    ctx.stroke();ctx.setLineDash([]);
-    pivs.forEach(p=>{
-      ctx.fillStyle=pat.dir>0?"#16C784":"#F0B90B";
-      ctx.beginPath();ctx.arc(xAt(p.i),y(p.p),3.5,0,Math.PI*2);ctx.fill();
-    });
-    const anc = pat.dir>0
-      ? pivs.reduce((a,b)=> b.p<a.p?b:a)
-      : pivs.reduce((a,b)=> b.p>a.p?b:a);
-    ctx.fillStyle=pat.dir>0?"#16C784":"#F0B90B";
-    ctx.font="bold 12px sans-serif";ctx.textAlign="center";
-    const lyD=Math.min(Math.max(pat.dir>0 ? y(anc.p)+20 : y(anc.p)-12, pad.t+12), h-pad.b-4);
-    ctx.fillText("🔔"+pat.name, xAt(anc.i), lyD);
   }
 
   $("devFindBtn").onclick = findExamples;
