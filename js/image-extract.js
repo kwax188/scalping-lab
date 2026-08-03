@@ -143,12 +143,27 @@ export function extractCandles(img, F){
       }
     }
     if(cnt<4){ items.push(null); continue; }
-    // p2/p98で外れピクセル切り捨てた全体レンジ
-    const flat=[];
+    // 実体+ヒゲの範囲(hi/lo)を検出。
+    // 移動平均線などがこの列を横切ると、離れたYに疎らな点が混ざることがあるため、
+    // 単純な二値化された全ピクセルの2%/98%パーセンタイルは使わない。
+    // 代わりにYを近接(3px以内)でひとまとまりの塊(run)に分け、
+    // 総ピクセル数が最大の塊(=本物のローソク足の実体+ヒゲ)だけを採用する。
+    // 横切る線は塊内の総ピクセル数が少ないため、自然に無視される。
     const ys=[...rowpix.keys()].sort((a,b)=>a-b);
-    for(const y of ys){ const n=rowpix.get(y)[0]; for(let j=0;j<n;j++) flat.push(y); }
-    const hi=flat[Math.floor(flat.length*0.02)];
-    const lo=flat[Math.min(flat.length-1,Math.floor(flat.length*0.98))];
+    const yRuns=[];
+    for(const y of ys){
+      const last=yRuns.length?yRuns[yRuns.length-1]:null;
+      if(last && y-last.lastY<=3){ last.ys.push(y); last.lastY=y; }
+      else yRuns.push({ys:[y], lastY:y});
+    }
+    let mainRun=yRuns[0], mainSum=-1;
+    for(const run of yRuns){
+      let sum=0;
+      for(const y of run.ys) sum+=rowpix.get(y)[0];
+      if(sum>mainSum){ mainSum=sum; mainRun=run; }
+    }
+    const hi=mainRun.ys[0];
+    const lo=mainRun.ys[mainRun.ys.length-1];
     // 実体 = 行幅が最大幅の55%以上の行
     let wmax=0;
     for(const y of ys){ const e=rowpix.get(y); if(y>=hi&&y<=lo&&e[0]>wmax)wmax=e[0]; }
@@ -167,7 +182,9 @@ export function extractCandles(img, F){
   while(items.length&&items[0]===null) items.shift();
   while(items.length&&items[items.length-1]===null) items.pop();
 
-  // 縦スパン中央値フィルタ
+  // 縦スパン中央値フィルタ(谷分割の誤結合などで生じた明らかな異常値だけを除外)
+  // 上のhi/lo検出(近接run方式)で移動平均線混入は既に除去済みなので、
+  // ここでの閾値は「本物の大暴落・急騰ローソク足」を誤って消さないよう緩めにする。
   const vv=items.filter(Boolean);
   if(vv.length<8){
     F.els.stat.textContent=`⚠ 抽出できたローソクが${vv.length}本のみ。チャート部分を大きめに撮ってください。`;
@@ -175,7 +192,7 @@ export function extractCandles(img, F){
   }
   const spans=vv.map(i=>i.lo-i.hi).sort((a,b)=>a-b);
   const medspan=spans[Math.floor(spans.length/2)];
-  let out=items.map(i=> (i && (i.lo-i.hi)<=medspan*6) ? i : null).filter(Boolean);
+  let out=items.map(i=> (i && (i.lo-i.hi)<=medspan*20) ? i : null).filter(Boolean);
 
   F.candles = out.map(i=>({x:i.x,hi:i.hi,lo:i.lo,bt:i.bt,bb:i.bb,up:i.nr>=i.nb}));
   F.els.stat.innerHTML=`✅ <b style="color:var(--green)">${F.candles.length}本</b>のローソクを読み取り（ピッチ約${pitchEst}px）`;
